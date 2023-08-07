@@ -3,14 +3,14 @@ const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const _ = require("lodash");
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 app.use(bodyParser.urlencoded({
     extended: true
 }))
 app.set('view engine', 'ejs');
 app.use(express.static("public"))
 
-mongoose.connect("mongodb+srv://admin_udith:udith123@cluster0.tyqhg.mongodb.net/todolistDB?retryWrites=true&w=majority", {
+mongoose.connect("mongodb://localhost:27017/todolistDB?retryWrites=true&w=majority", {
     useNewUrlParser: true,
     useUnifiedTopology: true,
     useFindAndModify:false
@@ -49,7 +49,6 @@ Item.find({}, function (err, foundItems) {
 
 })
 
-const workItems = []
 app.get('/', function (req, res) {
     Item.find(function (err, items) {
         if (items.length === 0) {
@@ -67,13 +66,13 @@ app.get('/', function (req, res) {
         __v: 0
     })
 });
+
 app.post('/', function (req, res) {
     const itemName = req.body.item;
     const listName = req.body.list
     const item = new Item({
         name: itemName
     })
-
     if (req.body.list === "Today") {
         item.save();
         res.redirect("/");
@@ -86,31 +85,6 @@ app.post('/', function (req, res) {
             res.redirect("/" + listName)
         })
     }
-})
-
-app.get("/:customListName", function (req, res) {
-    const customListName = _.capitalize(req.params.customListName);
-    List.findOne({
-        name: customListName
-    }, function (err, foundList) {
-        if (!err) {
-            if (!foundList) {
-                const list = new List({
-                    name: customListName,
-                    items: defaultItems
-                });
-                list.save();
-                res.redirect("/" + customListName)
-            } else {
-                res.render('list', {
-                    title: foundList.name,
-                    newListItems: foundList.items
-                });
-            }
-        } else {
-            console.log("Error when list search");
-        }
-    })
 })
 
 app.get("/about", function (req, res) {
@@ -141,5 +115,31 @@ app.post("/delete", function (req, res) {
         })
     }
 });
+
+app.get("/:customListName", function (req, res) {
+    const customListName = _.capitalize(req.params.customListName);
+    if(customListName === "Favicon.ico") return;
+    List.findOne({
+        name: customListName
+    }, async function (err, foundList) {
+        if (!err) {
+            if (!foundList) {
+                const list = new List({
+                    name: customListName,
+                    items: defaultItems
+                });
+                await list.save();
+                res.redirect("/" + customListName)
+            } else {
+                res.render('list', {
+                    title: foundList.name,
+                    newListItems: foundList.items
+                });
+            }
+        } else {
+            console.log("Error when list search");
+        }
+    })
+})
 
 app.listen(PORT, () => console.log(`Server started on port ${ PORT }`));
